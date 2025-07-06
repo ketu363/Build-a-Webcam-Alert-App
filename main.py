@@ -1,6 +1,6 @@
 import cv2
 import time
-
+from  emailing import send_email
 # To start the vidio from ur camera
 # If you have laptop then put 0 to use it as main camera and if you attached secondary camera put 1 to use that as main camera
 video = cv2.VideoCapture(0)
@@ -8,8 +8,10 @@ time.sleep(1)
 
 # We are creating a first frame variable that we use to capture the 1st frame and that will be used to compare with all different frame
 first_frame = None
+status_list = []
 
 while True:
+    status = 0
     check, frame = video.read()
     # Make the color image in gray image so it will reduce the data
     gray_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
@@ -43,7 +45,22 @@ while True:
         # otherwise if object area pixl is grater than 10k pixl it will find the  x,y corner( point on the object) and from x,y it will find width and height of the object
         x, y, w, h =cv2.boundingRect(contour)
         # This will create the rectangle around the original fram (frame1).
-        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 3)
+        rectangle = cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 3)
+
+        if rectangle.any():
+            status = 1
+
+    status_list.append(status)
+    # get the last two digit of the list
+    status_list = status_list[-2:]
+
+    # if last two item of list , 1st item ==1 and 2nd item ==0 means object went from the frame
+    if status_list[0] == 1 and status_list[1] == 0:
+        # will send email if any object will detect
+        send_email()
+
+
+    print(status_list)
 
     # Will show the color vidio with gree rectangle
     cv2.imshow("Vidio", frame)
