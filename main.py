@@ -1,5 +1,6 @@
 import cv2
 import time
+import glob
 from  emailing import send_email
 # To start the vidio from ur camera
 # If you have laptop then put 0 to use it as main camera and if you attached secondary camera put 1 to use that as main camera
@@ -10,9 +11,16 @@ time.sleep(1)
 first_frame = None
 status_list = []
 
+# to store the images per frame making counter
+count = 1
+
+# clean the image folder after sending mail
+def clean_folder():
+
 while True:
     status = 0
     check, frame = video.read()
+
     # Make the color image in gray image so it will reduce the data
     gray_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
     # To make calculation more efficient we will apply gaussian blur method
@@ -49,6 +57,16 @@ while True:
 
         if rectangle.any():
             status = 1
+            # To Store image
+            cv2.imwrite(f"images/{count}.png", frame)
+            count = count + 1
+            # find the best image to send in the email
+            all_images = glob.glob("images/*.png")
+            # return the image that is in middle
+            index = int(len(all_images) / 2)
+            # return the one image with the middle of all images like is 18 image it return 18/2 9th image index item
+            image_with_object = all_images[index]
+
 
     status_list.append(status)
     # get the last two digit of the list
@@ -57,7 +75,7 @@ while True:
     # if last two item of list , 1st item ==1 and 2nd item ==0 means object went from the frame
     if status_list[0] == 1 and status_list[1] == 0:
         # will send email if any object will detect
-        send_email()
+        send_email(image_with_object)
 
 
     print(status_list)
