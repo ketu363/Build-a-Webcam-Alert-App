@@ -1,7 +1,10 @@
+import os
 import cv2
 import time
 import glob
 from  emailing import send_email
+from threading import Thread
+
 # To start the vidio from ur camera
 # If you have laptop then put 0 to use it as main camera and if you attached secondary camera put 1 to use that as main camera
 video = cv2.VideoCapture(0)
@@ -16,10 +19,18 @@ count = 1
 
 # clean the image folder after sending mail
 def clean_folder():
+    print("clean_folder function started")
+    images = glob.glob("images/*.png")
+    for image in images:
+        os.remove(image)
+    print("clean_folder function ended")
 
 while True:
     status = 0
     check, frame = video.read()
+
+    # This ensures image_with_object always exists — either as None or as a valid image path (when an object is detected and image is saved).
+    image_with_object = None
 
     # Make the color image in gray image so it will reduce the data
     gray_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
@@ -73,19 +84,37 @@ while True:
     status_list = status_list[-2:]
 
     # if last two item of list , 1st item ==1 and 2nd item ==0 means object went from the frame
-    if status_list[0] == 1 and status_list[1] == 0:
+    if status_list[0] == 1 and status_list[1] == 0 and image_with_object:
         # will send email if any object will detect
-        send_email(image_with_object)
+
+        # Creating threading for the sending mail this will allow the function to run in the background
+        email_thread = Thread(target=send_email, args=(image_with_object,))
+        email_thread.daemon = True
+
+        # starting the thread
+        email_thread.start()
 
 
     print(status_list)
 
     # Will show the color vidio with gree rectangle
     cv2.imshow("Vidio", frame)
-   # it's create keyboard key object and if user press q it will stop the program
+    # it's create keyboard key object and if user press q it will stop the program
     key = cv2.waitKey(1)
 
     if key == ord("q"):
+        # creating thread for cleaning the folder
+        clean_thread = Thread(target=clean_folder)
+        clean_thread.daemon = True
+        clean_thread.start()
+
         break
 
+
 video.release()
+
+# if email_thread is not None:
+#     email_thread.join()
+#
+# print("Program safely ended after email was sent.")
+
